@@ -232,6 +232,8 @@ class StressInputs:
     # Kalkulator IHSG baseline (juta Rp)
     spi_saham_des_juta: float = 0.0
     spi_saham_rep_juta: float = 0.0
+    rd_spi_saham_juta: float = 0.0   # SPI Reksa Dana Saham (juta) - input manual dari PDF
+                                     # "Laporan SPI Reksadana per Jenis" (DISK), mis. -3041
     # SPI reksa dana per jenis (Rp) - Laporan SPI Reksadana per Jenis (DISK)
     rd_saham_np: float = 0.0
     rd_saham_nw: float = 0.0
@@ -288,7 +290,7 @@ def load_last_inputs(path: Path = LAST_INPUTS_PATH) -> StressInputs | None:
 # --------------------------------------------------------------------------
 def compute_baseline(inp: StressInputs) -> dict:
     out = {}
-    rd_spi_saham_juta = (inp.rd_saham_nw - inp.rd_saham_np) / 1e6
+    rd_spi_saham_juta = float(inp.rd_spi_saham_juta)
     l8a = round_half_up(inp.spi_saham_des_juta)
     l8b = round_half_up(rd_spi_saham_juta)
     L8 = l8a + l8b
@@ -765,6 +767,50 @@ def read_budget(src, year: int, month: int) -> BudgetData:
 
 
 # --------------------------------------------------------------------------
+# PDF "Laporan SPI Reksadana per Jenis" (DISK)
+# --------------------------------------------------------------------------
+SPI_RD_JENIS = ["Campuran", "Indeks", "Pasar Uang", "Pendapatan Tetap", "Saham", "Terproteksi", "Total"]
+_NUM_ID = r"\(?-?\d{1,3}(?:\.\d{3})*,\d+\)?"
+
+
+def _id_number(tok: str) -> float:
+    """'(3.040.594.067,36)' -> -3040594067.36 ; '500.762.376,57' -> 500762376.57"""
+    neg = tok.startswith("(") or tok.startswith("-")
+    v = float(tok.strip("()-").replace(".", "").replace(",", "."))
+    return -v if neg else v
+
+
+def read_spi_reksadana_pdf(data: bytes) -> dict:
+    """Baca tabel Laporan SPI Reksadana per Jenis.
+    Hasil: {"rows": {jenis: {"unit","np","nw","spi"}}, "periode": date|None, "warnings": [...]}"""
+    from ffs_reader import pdf_text, _MONTH_WORDS
+    text = pdf_text(data)
+    flat = re.sub(r"\s+", " ", text)
+    rows, warns = {}, []
+    for jenis in SPI_RD_JENIS:
+        pat = r"(?<![A-Za-z])" + r"\s+".join(map(re.escape, jenis.split())) + r"\s+((?:" + _NUM_ID + r"\s*){1,4})"
+        m = re.search(pat, flat)
+        if not m:
+            continue
+        nums = [_id_number(x) for x in re.findall(_NUM_ID, m.group(1))]
+        nums += [0.0] * (4 - len(nums))
+        unit, np_, nw, spi = nums[:4]
+        rows[jenis] = {"unit": unit, "np": np_, "nw": nw, "spi": spi}
+        if nw and abs((nw - np_) - spi) > 1:
+            warns.append(f"Baris {jenis}: SPI ({spi:,.2f}) tidak sama dengan Nilai Wajar - Nilai Perolehan.")
+    periode = None
+    m = re.search(r"Periode\s*:?\s*(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})", flat)
+    if m and _MONTH_WORDS.get(m.group(2).lower()):
+        try:
+            periode = dt.date(int(m.group(3)), _MONTH_WORDS[m.group(2).lower()], int(m.group(1)))
+        except ValueError:
+            periode = None
+    if "Saham" not in rows:
+        warns.append("Baris 'Saham' tidak ditemukan di PDF. Pastikan file adalah Laporan SPI Reksadana per Jenis.")
+    return {"rows": rows, "periode": periode, "warnings": warns}
+
+
+# --------------------------------------------------------------------------
 # Nilai awal dari template (file bulan sebelumnya)
 # --------------------------------------------------------------------------
 def _parse_pct_formula(f) -> tuple:
@@ -807,7 +853,8 @@ def defaults_from_template(template_path=TEMPLATE_PATH) -> StressInputs:
     l8_nums = [float(x) for x in re.findall(r"-?\d+(?:\.\d+)?", str(sbf["L8"].value or ""))]
     rd_juta = (inp.rd_saham_nw - inp.rd_saham_np) / 1e6
     inp.spi_saham_des_juta = l8_nums[0] if l8_nums else 0.0
-    inp.spi_saham_rep_juta = g(sb, "L9") - rd_juta
+    inp.rd_spi_saham_juta = l8_nums[1] if len(l8_nums) > 1 else round_half_up(rd_juta, 2)
+    inp.spi_saham_rep_juta = g(sb, "L9") - inp.rd_spi_saham_juta
     kf = wf[SH_KRD]
     funds = []
     r = 4
@@ -889,7 +936,14 @@ def validate_inputs(inp: StressInputs, raw: RawData | None) -> tuple:
     if len(inp.funds) > 6:
         errors.append("Komposisi RD maksimal 6 reksa dana.")
     if not inp.rd_saham_nw and not inp.rd_saham_np:
-        warns.append("SPI Reksa Dana Saham (NP/NW) masih 0.")
+        warns.append("SPI Reksa Dana Saham (NP/NW) di tab 4 masih 0.")
+    if not inp.rd_spi_saham_juta:
+        warns.append("SPI Reksa Dana Saham (juta) di Calculator IHSG Skenario Baseline masih 0.")
+    else:
+        rd_tab4 = (inp.rd_saham_nw - inp.rd_saham_np) / 1e6
+        if (inp.rd_saham_nw or inp.rd_saham_np) and abs(inp.rd_spi_saham_juta - rd_tab4) > 1:
+            warns.append(f"SPI Reksa Dana Saham di kalkulator IHSG ({inp.rd_spi_saham_juta:,.2f} juta) berbeda "
+                         f"dengan SPI Saham di tab 4 ({rd_tab4:,.2f} juta). Cek lagi PDF Laporan SPI Reksadana.")
     for c in inp.credit:
         if not c.rating:
             errors.append(f"Rating grup '{c.nama}' belum diisi (tab Risiko Kredit).")
