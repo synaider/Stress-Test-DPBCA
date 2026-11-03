@@ -62,7 +62,7 @@ NUM_FIELDS = ["ihsg_existing", "ihsg_escalated", "ihsg_severe",
               "ex_total_aset", "ex_spi", "ex_laba", "ex_delta_spi",
               "pr_total_aset", "pr_spi", "pr_laba", "pr_delta_spi", "aset_neto",
               "yc_nilai_wajar", "yc_delta_spi", "spi_saham_des_juta", "spi_saham_rep_juta",
-              "rd_saham_np", "rd_saham_nw", "rd_campuran_np", "rd_campuran_nw",
+              "rd_saham_np", "rd_saham_nw", "rd_campuran_np", "rd_campuran_nw", "rd_spi_saham_juta",
               "likuiditas_eksposur"]
 INT_FIELDS = ["yc_tenor", "likuiditas_tenor"]
 PCT_FIELDS = ["yield_existing", "yield_escalated", "yield_severe"]
@@ -311,7 +311,41 @@ def on_rd_from_raw():
     cam = per.get("Campuran", (0.0, 0.0))
     S.f_rd_saham_np, S.f_rd_saham_nw = float(sah[0]), float(sah[1])
     S.f_rd_campuran_np, S.f_rd_campuran_nw = float(cam[0]), float(cam[1])
+    S.f_rd_spi_saham_juta = round((float(sah[1]) - float(sah[0])) / 1e6, 6)
     flash("info", "SPI reksa dana diisi dari RAW. Cocokkan dengan Laporan SPI Reksadana per Jenis (DISK).")
+
+
+def on_spi_pdf(key: str):
+    """Upload PDF 'Laporan SPI Reksadana per Jenis' -> isi tab 4 & kalkulator IHSG."""
+    up = S.get(key)
+    if up is None:
+        return
+    try:
+        res = sc.read_spi_reksadana_pdf(up.getvalue())
+    except Exception as e:
+        flash("error", f"PDF Laporan SPI Reksadana tidak bisa dibaca: {e}")
+        return
+    rows = res["rows"]
+    if "Saham" not in rows:
+        flash("error", "Baris 'Saham' tidak ditemukan. Pastikan file adalah Laporan SPI Reksadana per Jenis, "
+                       "atau isi angkanya manual.")
+        return
+    sah, cam = rows["Saham"], rows.get("Campuran", {"np": 0.0, "nw": 0.0})
+    S.f_rd_saham_np, S.f_rd_saham_nw = sah["np"], sah["nw"]
+    S.f_rd_campuran_np, S.f_rd_campuran_nw = cam["np"], cam["nw"]
+    S.f_rd_spi_saham_juta = round(sah["spi"] / 1e6, 6)
+    S.spi_pdf_rows = rows
+    per = res["periode"]
+    msg = (f"Laporan SPI Reksadana per Jenis terbaca"
+           + (f" (periode {per.day} {sc.BULAN[per.month]} {per.year})" if per else "")
+           + f": SPI Saham Rp {fmt_id(sah['spi'])} → {fmt_id(sah['spi'] / 1e6)} juta, "
+           f"SPI Campuran Rp {fmt_id(cam.get('spi', 0.0))}.")
+    flash("success", msg)
+    if per and (per.year, per.month) != (int(S.f_tahun), sc.BULAN.index(S.f_bulan)):
+        flash("warning", f"Periode PDF ({sc.BULAN[per.month]} {per.year}) berbeda dengan periode laporan "
+                         f"yang dipilih ({S.f_bulan} {S.f_tahun}).")
+    for w in res["warnings"]:
+        flash("warning", w)
 
 
 def on_fund_select(i: int):
@@ -650,7 +684,12 @@ with tabs[2]:
                             step=1.0, format="%.2f", key="f_spi_saham_des_juta")
             st.number_input("SPI Saham bulan laporan (juta Rp) — Budget / RAW", step=1.0, format="%.2f",
                             key="f_spi_saham_rep_juta")
-            st.caption(f"SPI Reksa Dana Saham dari tab 4: {fmt_id(base['rd_spi_saham_juta'], 2)} juta")
+            st.number_input("SPI Reksa Dana Saham (juta Rp) — input manual dari PDF Laporan SPI Reksadana "
+                            "per Jenis (DISK), mis. -3041", step=1.0, format="%.2f", key="f_rd_spi_saham_juta")
+            st.file_uploader("…atau upload PDF Laporan SPI Reksadana per Jenis (mengisi kotak di atas & tab 4)",
+                             type=["pdf"], key="up_spi_pdf_t3", on_change=on_spi_pdf, args=("up_spi_pdf_t3",))
+            st.caption("Dipakai di kedua komponen: L8 = SPI Saham 31 Des + SPI RD Saham, "
+                       "L9 = SPI Saham bulan laporan + SPI RD Saham (dibulatkan ke juta).")
             st.markdown(
                 f"| | |\n|---|---|\n"
                 f"| SPI 31 Des (L8) | =({int(base['L8a'])})+({int(base['L8b'])}) = **{fmt_id(base['L8'], 0)}** |\n"
@@ -767,6 +806,15 @@ with tabs[3]:
     st.button("➕ Tambah reksa dana", on_click=on_add_fund, disabled=S.n_funds >= 6)
 
     st.markdown("#### SPI Reksa Dana per Jenis (input manual dari DISK: *Laporan SPI Reksadana per Jenis*)")
+    st.file_uploader("Upload PDF Laporan SPI Reksadana per Jenis (opsional — mengisi kotak di bawah dan "
+                     "SPI RD Saham di kalkulator IHSG tab 3)", type=["pdf"], key="up_spi_pdf_t4",
+                     on_change=on_spi_pdf, args=("up_spi_pdf_t4",))
+    if S.get("spi_pdf_rows"):
+        with st.expander("Isi PDF yang terbaca"):
+            _w(st.dataframe, pd.DataFrame([{"Jenis Reksadana": k, "Jumlah Unit": fmt_id(v["unit"], 4),
+                                            "Nilai Perolehan": fmt_id(v["np"]), "Nilai Wajar": fmt_id(v["nw"]),
+                                            "SPI": fmt_id(v["spi"])} for k, v in S.spi_pdf_rows.items()]),
+               hide_index=True)
     r1, r2 = st.columns(2)
     with r1:
         with st.container(border=True):
