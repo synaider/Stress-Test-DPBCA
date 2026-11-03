@@ -1,0 +1,43 @@
+[
+  {
+    "nama": "Schroder Dana Terpadu II",
+    "mi": "PT Schroder Investment Management Indonesia",
+    "jenis": "Campuran",
+    "urls": [
+      "https://www.smbci.com/pdf/sinaya/investment-product/{pub_yyyy}-{pub_m}/ffs----schroder--dana--terpadu--ii.pdf",
+      "https://static-invest.cermati.com/mutualfund/documents/fund-fact-sheet/Schroder_Investment_Management_Indonesia_Schroder_Dana_Terpadu_II_{bulan}_{yyyy}.pdf",
+      "https://www.dbs.com/id/iwov-resources/flp/pdf/FFS-Prospectus/reksadana-campuran/ffs/SCHRODER_DANA_TERPADU_II_EN.pdf",
+      "https://www.maybank.co.id/premier/aset-enhancer/-/media/Downloaded Content/Investment/Fund-Fact-Sheet/Schroders/FFS-Schroder-Dana-Terpadu-II.pdf"
+    ],
+    "halaman": [
+      "https://www.bareksa.com/id/data/reksadana/307/schroder-dana-terpadu-ii",
+      "https://www.bca.co.id/id/Individu/produk/Investasi-dan-Asuransi/reksadana/Pilihan-Produk-Reksadana/Schroder-Dana-Terpadu-II"
+    ]
+  },
+  {
+    "nama": "Trimegah Balanced Absolute Strategy Kelas A",
+    "mi": "PT Trimegah Asset Management",
+    "jenis": "Campuran",
+    "urls": [
+      "https://cache.makmur.id/files/products/60d1e69d4cc7bb3913edb067/factsheet.pdf",
+      "https://static-invest.cermati.com/mutualfund/documents/fund-fact-sheet/Trimegah_Asset_Management_Trimegah_Balanced_Absolute_Strategy_Kelas_A_{bulan}_{yyyy}.pdf",
+      "https://media.bareksa.com/uploads/file_doc/{pub_yyyy}/{pub_mm}/ACTBKAS_factsheet.pdf"
+    ],
+    "halaman": [
+      "https://www.trimegah-am.com/product/view/reksa-dana-campuran/trimegah-balanced-absolute-strategy",
+      "https://invest.cermati.com/reksadana/campuran/trimegah-balanced-absolute-strategy-kelas-a-lg002mxc01bast01"
+    ]
+  },
+  {
+    "nama": "Trimegah Balanced Absolute Strategy Low Volatility",
+    "mi": "PT Trimegah Asset Management",
+    "jenis": "Campuran",
+    "urls": [
+      "https://cache.makmur.id/files/products/65b070ed3bd47139ba4debf0/factsheet.pdf",
+      "https://static-invest.cermati.com/mutualfund/documents/fund-fact-sheet/Trimegah_Asset_Management_Trimegah_Balanced_Absolute_Strategy_Low_Volatility_{bulan}_{yyyy}.pdf"
+    ],
+    "halaman": [
+      "https://www.trimegah-am.com/"
+    ]
+  }
+]

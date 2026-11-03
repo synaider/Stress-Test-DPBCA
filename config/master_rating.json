@@ -1,0 +1,52 @@
+{
+  "non_mi": {
+    "MANDIRI GROUP": "idAAA",
+    "BTN GROUP": "idAAA",
+    "DJARUM GROUP": "AAA(idn)",
+    "MITSUBISHI UFJ FINANCIAL GROUP": "idAAA",
+    "PLN GROUP": "idAAA",
+    "PT METAMORFOSIS EKOSISTEM INDONESIA": "idA-",
+    "BRI GROUP": "idAAA",
+    "CT CORP GROUP": "idAA-",
+    "MALAYAN BANKING BERHAD GROUP": "idAAA",
+    "HK GROUP": "idAA-",
+    "BNI GROUP": "idAAA",
+    "SALIM GROUP": "idAA+",
+    "SUMITOMO MITSUI FINANCIAL GROUP": "idAAA",
+    "PANIN GROUP": "idAA",
+    "OCBC GROUP": "AAA(idn)",
+    "SMF GROUP": "idAAA",
+    "KAI GROUP": "idAAA",
+    "BARITO PACIFIC GROUP": "idA+",
+    "ANGKASA PURA GROUP": "idAAA",
+    "WASKITA GROUP": "idD",
+    "ASTRA GROUP": "AAA(idn)"
+  },
+  "mi": [
+    {
+      "pihak": "PT MAJORIS ASSET MANAGEMENT",
+      "nama": "PT Majoris Asset Management",
+      "rating": "Cukup"
+    },
+    {
+      "pihak": "PT TRIMEGAH ASSET MANAGEMENT",
+      "nama": "PT Trimegah Asset Management",
+      "rating": "Sangat Bagus"
+    },
+    {
+      "pihak": "PT SCHRODER INVESTMENT MANAGEMENT INDONESIA",
+      "nama": "PT Schroder Investment Management Indonesia",
+      "rating": "Cukup"
+    },
+    {
+      "pihak": "PT BNP PARIBAS ASSET MANAGEMENT",
+      "nama": "PT BNP Paribas Asset Management",
+      "rating": "Sangat Bagus"
+    },
+    {
+      "pihak": "PT MANULIFE ASET MANAJEMEN INDONESIA",
+      "nama": "PT Manulife Aset Manajemen Indonesia",
+      "rating": "Sangat Bagus"
+    }
+  ]
+}
