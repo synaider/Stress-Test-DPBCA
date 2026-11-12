@@ -595,21 +595,22 @@ with tabs[1]:
         st.markdown(f'<div class="dp-card">IHSG Baseline (otomatis): <b>{fmt_id(ib)}</b></div>',
                     unsafe_allow_html=True)
         lo, hi = sorted([float(S.f_ihsg_severe), float(ib)])
-        smin, smax = float(math.floor(lo) + 1), float(math.ceil(hi) - 1)
-        if smax - smin >= 1:
-            cur = float(S.f_ihsg_escalated)
-            if not (smin <= cur <= smax):
-                S.f_ihsg_escalated = float(round((smin + smax) / 2))
-            elif cur != round(cur):
-                S.f_ihsg_escalated = float(round(cur))
-            st.slider("IHSG Escalated (tentukan sendiri, di antara Severe dan Baseline)",
-                      min_value=smin, max_value=smax, step=1.0, key="f_ihsg_escalated", format="%.0f")
-            st.caption(f"Rentang yang diizinkan: {fmt_id(smin, 0)} – {fmt_id(smax, 0)} "
-                       "(geser, atau klik slider lalu pakai tombol panah ← → untuk per poin).")
-        else:
-            st.warning("IHSG Severe harus lebih rendah dari IHSG Baseline.")
-            st.number_input("IHSG Escalated", step=1.0, format="%.2f", key="f_ihsg_escalated")
+        # Input manual (tanpa slider): angka bebas diketik, diberi peringatan bila di luar rentang
+        st.number_input("IHSG Escalated (ketik sendiri, harus di antara IHSG Severe dan IHSG Baseline)",
+                        step=1.0, format="%.2f", key="f_ihsg_escalated")
         ie, isv = float(S.f_ihsg_escalated), float(S.f_ihsg_severe)
+        st.caption(f"Rentang yang diizinkan: di atas **{fmt_id(lo)}** dan di bawah **{fmt_id(hi)}**")
+        if hi - lo <= 0:
+            st.warning("IHSG Severe sama dengan IHSG Baseline, jadi tidak ada rentang untuk IHSG Escalated.")
+        elif not (lo < ie < hi):
+            arah = "terlalu rendah" if ie <= lo else "terlalu tinggi"
+            st.warning(f"⚠️ IHSG Escalated **{fmt_id(ie)}** di luar rentang ({arah}). Masukkan angka di antara "
+                       f"{fmt_id(lo)} dan {fmt_id(hi)}. Excel belum bisa dibuat sebelum angka ini diperbaiki.")
+        else:
+            st.markdown("<span class='dp-ok'>✓ Di dalam rentang</span>", unsafe_allow_html=True)
+        if isv > ib:
+            st.info("Catatan: IHSG Severe saat ini lebih tinggi dari IHSG Baseline (biasanya Severe lebih "
+                    "rendah). Cek kembali IHSG Existing dan Calculator IHSG Skenario Baseline di tab 3.")
         st.caption(f"% perubahan dari Baseline → Escalated **{pct_id((ie - ib) / ib if ib else None)}**, "
                    f"Severe **{pct_id((isv - ib) / ib if ib else None)}**")
         st.link_button("IHSG historis (Investing.com)", "https://id.investing.com/indices/idx-composite-historical-data")
